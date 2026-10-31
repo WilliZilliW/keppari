@@ -7,7 +7,7 @@ export class GameAudio {
   }
 
   init() {
-    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume(); return; }
+    if (this.ctx) { this.resume(); return; }
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return;
     const ctx = this.ctx = new C();
@@ -307,6 +307,19 @@ export class GameAudio {
     const v = on && this.musicOn ? 0.35 : 0;
     this.mus.gain.cancelScheduledValues(this.t);
     this.mus.gain.setTargetAtTime(v, this.t, 0.6);
+  }
+
+  // Hiljennä kaikki (peli lopetettu tai sovellus taustalla)
+  pause() {
+    if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch { /* */ } }
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    this.mus.gain.cancelScheduledValues(this.t);
+    this.mus.gain.setValueAtTime(0, this.t);
+    this.ctx.suspend().catch(() => {});
+  }
+
+  resume() {
+    if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
   }
 
   // ---------- kuuluttaja ----------

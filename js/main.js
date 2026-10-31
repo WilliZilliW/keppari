@@ -1144,7 +1144,7 @@ function exitToTitle() {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   if (!wasXR && renderer.xr.isPresenting) renderer.xr.getSession().end();
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
-  audio.setMusic(true);
+  audio.pause();
   onResize();
 }
 
@@ -1159,6 +1159,12 @@ function onResize() {
   $('rotate').hidden = !(G.mode === 'cardboard' && h > w);
 }
 window.addEventListener('resize', onResize);
+// sovellus taustalle / näyttö pois => äänet pois; takaisin peliin => äänet takaisin
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) audio.pause();
+  else if (G.mode) { audio.resume(); audio.setMusic(G.state === 'lobby' || G.state === 'results'); requestWake(); }
+});
+window.addEventListener('pagehide', () => audio.pause());
 window.addEventListener('orientationchange', () => setTimeout(onResize, 300));
 
 // ---------------------------------------------------------------- pääsilmukka
@@ -1318,7 +1324,7 @@ if (navigator.xr && navigator.xr.isSessionSupported) {
 }
 
 // testaus / debug
-window.__keppari = { G, P, settings, enterGame, onUiClick, CLASSES, startRound, step };
+window.__keppari = { G, P, audio, settings, enterGame, onUiClick, CLASSES, startRound, step };
 
 if (SIM) {
   // nopea simulaatio ilman piirtoa: ?sim&auto[=kohina]&cls=N&runs=M
