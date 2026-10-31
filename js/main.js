@@ -116,9 +116,9 @@ function jumpParams(speed) {
 const reticle = new Reticle();
 camera.add(reticle.group);
 
-const hud = new Panel({ width: 0.66, pxW: 1024, pxH: 190, draw: drawHud });
+const hud = new Panel({ width: 0.66, pxW: 1024, pxH: 262, draw: drawHud });
 hud.mesh.material.depthTest = false; hud.mesh.renderOrder = 50;
-hud.mesh.position.set(0, -0.34, -1.15); hud.mesh.rotation.x = 0.28;
+hud.mesh.position.set(0, -0.36, -1.15); hud.mesh.rotation.x = 0.28;
 camera.add(hud.mesh);
 
 const msgPanel = new Panel({ width: 0.95, pxW: 1024, pxH: 230, draw: drawMsg });
@@ -356,11 +356,12 @@ function drawResults(g, p) {
 }
 
 function drawHud(g) {
-  g.clearRect(0, 0, 1024, 190);
+  g.clearRect(0, 0, 1024, 262);
   const st = G.state;
   if (!['ready', 'countdown', 'riding', 'finished'].includes(st)) return;
-  g.fillStyle = 'rgba(6,16,36,0.72)'; roundRect(g, 8, 8, 1008, 174, 30); g.fill();
+  g.fillStyle = 'rgba(6,16,36,0.72)'; roundRect(g, 8, 8, 1008, 246, 30); g.fill();
   g.strokeStyle = 'rgba(255,214,102,0.6)'; g.lineWidth = 3; g.stroke();
+  drawGauge(g);
   const r = G.round;
   if (st === 'ready') {
     text(g, 'Tervehdi tuomaria', 512, 58, { size: 54, weight: 900, color: '#ffd666', align: 'center' });
@@ -390,6 +391,44 @@ function drawHud(g) {
   drawArrow(g);
 }
 
+// Vauhtimittari: askellaji + vauhtipalkki + kertyneet raviaskeleet
+function gait() {
+  if (P.air) return 'hyppy';
+  if (P.speed < 0.3) return 'pysähdys';
+  if (P.speed < 2.4) return 'ravi';
+  return 'laukka';
+}
+function drawGauge(g) {
+  const y = 196, cur = gait();
+  g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(30, 186); g.lineTo(994, 186); g.stroke();
+  const segs = [['pysähdys', 'PYSÄHDYS', '#9fb3d9'], ['ravi', 'RAVI', '#ff9f43'], ['laukka', 'LAUKKA', '#7CFC00']];
+  segs.forEach(([id, label, col], i) => {
+    const x = 30 + i * 150;
+    const on = cur === id || (cur === 'hyppy' && id === 'laukka');
+    g.fillStyle = on ? col : 'rgba(255,255,255,0.08)';
+    roundRect(g, x, y, 138, 46, 14); g.fill();
+    text(g, label, x + 69, y + 24, { size: 24, weight: 900, color: on ? '#0b1d3a' : 'rgba(255,255,255,0.45)', align: 'center' });
+  });
+  // vauhtipalkki
+  const bx = 490, bw = 300, frac = clamp(P.speed / G.cls.canter, 0, 1.05);
+  g.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(g, bx, y + 12, bw, 22, 11); g.fill();
+  const col = cur === 'ravi' ? '#ff9f43' : cur === 'pysähdys' ? '#9fb3d9' : '#7CFC00';
+  if (frac > 0.02) { g.fillStyle = col; roundRect(g, bx, y + 12, Math.max(22, bw * Math.min(1, frac)), 22, 11); g.fill(); }
+  const trotMark = bx + bw * (2.4 / G.cls.canter);
+  g.fillStyle = '#ffffff'; g.fillRect(trotMark - 1, y + 6, 3, 34);
+  // ravin kertymä radalla (yli 5 s = 4 vp)
+  const r = G.round;
+  if (G.state === 'riding' && r) {
+    const tt = r.trotPen ? 'ravi: 4 vp' : `ravia ${Math.min(5, r.trotT).toFixed(1)}/5 s`;
+    text(g, tt, 994, y + 24, { size: 24, weight: 800, color: r.trotPen ? '#ff6b6b' : r.trotT > 3 ? '#ff9f43' : '#8fa3c8', align: 'right' });
+  } else if (G.mode === 'xr' || G.mode === 'cardboard') {
+    text(g, 'katso alas = hidasta', 994, y + 24, { size: 22, weight: 700, color: '#8fa3c8', align: 'right' });
+  } else {
+    text(g, G.mode === 'mono' && IS_TOUCH ? '🐢 = hidasta' : 'S = hidasta', 994, y + 24, { size: 22, weight: 700, color: '#8fa3c8', align: 'right' });
+  }
+}
+
 function drawArrow(g) {
   const a = G.arrow || 0;
   if (Math.abs(a) < 0.55) return;
@@ -415,7 +454,7 @@ let _hudKey = '';
 const SALUTE_DWELL = 1.3;
 function refreshHud() {
   const r = G.round;
-  const key = [G.state, r && r.time.toFixed(1), r && r.vp, r && r.disob, G.nextIdx, Math.ceil(G.countdown), Math.sign(Math.abs(G.arrow) > 0.55 ? G.arrow : 0), Math.round((G.saluteT || 0) * 10)].join('|');
+  const key = [G.state, r && r.time.toFixed(1), r && r.vp, r && r.disob, G.nextIdx, Math.ceil(G.countdown), Math.sign(Math.abs(G.arrow) > 0.55 ? G.arrow : 0), Math.round((G.saluteT || 0) * 10), gait(), Math.round(P.speed * 4), G.round && G.round.trotT.toFixed(1), G.round && G.round.trotPen].join('|');
   if (key !== _hudKey) { _hudKey = key; hud.redraw(); }
   hud.visible = ['ready', 'countdown', 'riding', 'finished'].includes(G.state);
 }
