@@ -12,7 +12,9 @@ Avaa GitHub Pages -osoite puhelimen Chromella:
    - **🤳 Pelaa kännykällä / ruudulla** – ilman laseja, pysty- tai vaaka-asennossa
 2. Valitse luokka ja keppihevonen (VR:ssä katsomalla nappia hetken, kännykällä napauttamalla).
 3. Kokeile valikon **hyppytestiä**: hyppää (VR) tai heilauta puhelinta (kännykkä) – näet heti, tunnistuiko.
-4. Lähtöpaikalla **tervehdi tuomaria** napauttamalla → kello soi → 45 s aikaa ylittää lähtölinja.
+4. Lähtöpaikalla **tervehdi tuomaria katsomalla tuomaritornia** hetki (tai napauta) → kello soi → 45 s aikaa ylittää lähtölinja.
+
+**Puhelin-VR toimii kokonaan ilman ohjainta:** ohjaus katseella, hyppy omalla hypyllä, valikot ja tervehdys katsomalla.
 
 | Toiminto | VR-lasit | Kännykkä ilman laseja | Tietokone |
 |---|---|---|---|

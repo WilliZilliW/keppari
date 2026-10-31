@@ -75,6 +75,7 @@ const G = {
   results: null, lastResult: null, lookYaw: 0, lookPitch: 0, apBack: false,
 };
 const P = { x: SPAWN.x, z: SPAWN.z, heading: 0, speed: 0, stun: 0, air: false, airT: 0, airDur: 0.6, peak: 0, h: 0, phase: 0, landT: -9, dip: 0 };
+const JUDGE = { x: world.judgePos.x, z: world.judgePos.z, h: 5.2 };
 const courseGroup = new THREE.Group();
 scene.add(courseGroup);
 
@@ -362,8 +363,13 @@ function drawHud(g) {
   g.strokeStyle = 'rgba(255,214,102,0.6)'; g.lineWidth = 3; g.stroke();
   const r = G.round;
   if (st === 'ready') {
-    text(g, 'Tervehdi tuomaria', 512, 66, { size: 54, weight: 900, color: '#ffd666', align: 'center' });
-    text(g, G.mode === 'mono' ? (IS_TOUCH ? 'napauta ruutua – kello soi' : 'paina välilyöntiä / klikkaa – kello soi') : 'napauta näyttöä / paina lasien nappia', 512, 128, { size: 34, color: '#ffffff', align: 'center' });
+    text(g, 'Tervehdi tuomaria', 512, 58, { size: 54, weight: 900, color: '#ffd666', align: 'center' });
+    const how = G.mode === 'mono' ? (IS_TOUCH ? 'katso tuomaritornia tai napauta' : 'katso tuomaritornia tai paina välilyöntiä') : 'katso tuomaritornia hetki – kello soi';
+    text(g, how, 512, 114, { size: 32, color: '#ffffff', align: 'center' });
+    const pr = clamp((G.saluteT || 0) / SALUTE_DWELL, 0, 1);
+    g.fillStyle = 'rgba(255,255,255,0.15)'; roundRect(g, 262, 146, 500, 22, 11); g.fill();
+    if (pr > 0) { g.fillStyle = '#ffd666'; roundRect(g, 262, 146, Math.max(22, 500 * pr), 22, 11); g.fill(); }
+    drawArrow(g);
     return;
   }
   if (st === 'countdown') {
@@ -406,9 +412,10 @@ function drawMsg(g) {
 }
 
 let _hudKey = '';
+const SALUTE_DWELL = 1.3;
 function refreshHud() {
   const r = G.round;
-  const key = [G.state, r && r.time.toFixed(1), r && r.vp, r && r.disob, G.nextIdx, Math.ceil(G.countdown), Math.sign(Math.abs(G.arrow) > 0.55 ? G.arrow : 0)].join('|');
+  const key = [G.state, r && r.time.toFixed(1), r && r.vp, r && r.disob, G.nextIdx, Math.ceil(G.countdown), Math.sign(Math.abs(G.arrow) > 0.55 ? G.arrow : 0), Math.round((G.saluteT || 0) * 10)].join('|');
   if (key !== _hudKey) { _hudKey = key; hud.redraw(); }
   hud.visible = ['ready', 'countdown', 'riding', 'finished'].includes(G.state);
 }
@@ -912,7 +919,7 @@ function updateGuide() {
   const riding = ['countdown', 'riding'].includes(G.state);
   const nf = G.state === 'riding' ? G.course[G.nextIdx] : (G.state === 'countdown' || G.state === 'ready' ? G.course[0] : null);
   for (const f of G.allFences) f.setHighlight(f === nf && (riding || G.state === 'ready'));
-  G.guideTarget = nf || (G.state === 'riding' ? FINISH_LINE : null);
+  G.guideTarget = G.state === 'ready' ? JUDGE : (nf || (G.state === 'riding' ? FINISH_LINE : null));
   G.nextFence = nf;
 }
 
@@ -1191,6 +1198,14 @@ function step(dt) {
     rig.updateMatrixWorld(true);
     updatePlayer(dt);
 
+    // tervehdys katsomalla tuomaria (ei vaadi ohjainta eikä napautusta)
+    if (G.state === 'ready') {
+      const a = wrap(Math.atan2(-(JUDGE.x - P.x), -(JUDGE.z - P.z)) - (G.gazeYaw || 0));
+      if (Math.abs(a) < 0.22 && G.time - G.readyT > 0.8) G.saluteT = (G.saluteT || 0) + dt;
+      else G.saluteT = Math.max(0, (G.saluteT || 0) - dt * 2);
+      if (G.mode === 'xr' || G.mode === 'cardboard') reticle.setProgress(clamp(G.saluteT / SALUTE_DWELL, 0, 1));
+      if (G.saluteT >= SALUTE_DWELL) { G.saluteT = 0; P.dip = 0.09; reticle.setProgress(0); salute(); }
+    } else if (G.saluteT) { G.saluteT = 0; reticle.setProgress(0); }
     if (G.state === 'finished' && G.time - G.finishT > (G.round.elim ? 4 : 3.5) && P.speed < 0.6) afterFinish();
 
     // kamera ja keho
@@ -1214,11 +1229,11 @@ function step(dt) {
   const showGuide = settings.guide && tgt && ['ready', 'countdown', 'riding'].includes(G.state);
   guide.visible = !!showGuide;
   if (showGuide) {
-    const h = tgt.standH ? tgt.standH + 0.75 : 2.2;
+    const h = tgt.h || (tgt.standH ? tgt.standH + 0.75 : 2.2);
     const x = tgt.def ? tgt.def.x : tgt.x, z = tgt.def ? tgt.def.z : tgt.z;
     guide.position.set(x, h + Math.sin(t * 3) * 0.12, z);
     const dist = Math.hypot(x - P.x, z - P.z);
-    guide.visible = dist > 5;
+    guide.visible = dist > 5 && !(G.state === 'ready' && (G.saluteT || 0) > 0);
     guide.scale.setScalar(clamp((dist - 5) / 4, 0.2, 1));
     guide.rotation.y = t * 2;
     G.arrow = wrap(Math.atan2(-(x - P.x), -(z - P.z)) - (G.gazeYaw || 0));
