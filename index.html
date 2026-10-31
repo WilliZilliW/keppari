@@ -34,19 +34,19 @@
       <div class="buttons">
         <button id="btnXR" class="big primary" hidden>🥽 Pelaa VR-laseilla</button>
         <button id="btnCardboard" class="big">📱 Puhelin-VR (Cardboard-tila)</button>
-        <button id="btnScreen" class="big ghost">🖥️ Pelaa ruudulla</button>
+        <button id="btnScreen" class="big ghost">🤳 Pelaa kännykällä / ruudulla</button>
       </div>
       <p id="xrNote" class="note"></p>
 
       <details>
         <summary>Näin pelaat</summary>
         <ul>
-          <li><b>Ohjaus katseella:</b> keppihevonen laukkaa sinne, minne katsot.</li>
-          <li><b>Hyppy:</b> napauta näyttöä / paina lasien nappia juuri ennen estettä.</li>
-          <li><b>Hidasta:</b> katso alas maahan (raviin tai pysähdys).</li>
-          <li><b>Valikot:</b> katso nappia hetki tai napauta.</li>
+          <li><b>VR-laseilla:</b> keppihevonen laukkaa sinne, minne katsot. <b>Hyppää oikeasti itse</b> juuri ennen estettä – puhelimen liikeanturi tunnistaa hypyn. Katso alas maahan hidastaaksesi.</li>
+          <li><b>Kännykällä ilman laseja:</b> ohjaa vetämällä sormella, <b>hyppää heilauttamalla puhelinta</b> ylöspäin, hidasta Hidasta-napilla.</li>
+          <li><b>Tietokoneella:</b> vedä hiirellä tai A/D, välilyönti = hyppy, S = hidasta.</li>
+          <li>Valikossa on <b>hyppytesti</b>: näet heti, tunnistaako puhelin hyppysi. Halutessasi hypyn voi vaihtaa napautukseen.</li>
           <li>Lähtöpaikalla <b>tervehdi tuomaria</b> napauttamalla – kello soi ja sinulla on 45 s aikaa ylittää lähtölinja.</li>
-          <li>Ruudulla: vedä hiirellä/sormella katsoaksesi, välilyönti tai napautus = hyppy, W/S = vauhti.</li>
+          <li>Vihreä raita maassa näyttää hyvän ponnistuskohdan (voi kytkeä pois).</li>
         </ul>
       </details>
       <details>
@@ -74,7 +74,11 @@
   <div id="loading" class="overlay"><div class="spinner"></div><p>Rakennetaan kilpailukenttää…</p></div>
   <div id="rotate" class="overlay" hidden><p>📱↻<br>Käännä puhelin vaakatasoon ja aseta se VR-laseihin.</p></div>
   <button id="exitBtn" hidden title="Takaisin valikkoon">✕</button>
-  <div id="touchHint" hidden>Vedä katsoaksesi · napauta hypätäksesi</div>
+  <div id="touchHint" hidden>Vedä sormella ohjataksesi · heilauta puhelinta hypätäksesi</div>
+  <div id="touchCtl" hidden>
+    <button id="tcBrake">🐢<span>Hidasta</span></button>
+    <button id="tcJump" hidden>⤒<span>Hyppy</span></button>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

@@ -8,6 +8,7 @@ import { GameAudio } from './audio.js';
 import { Panel, Reticle, panelBg, text, wrapText, roundRect } from './ui3d.js';
 import { VP, ELIM, START_WINDOW, timeFaults, fmtTime, generateField, rank } from './rules.js';
 import { makeCanvas, toTexture } from './textures.js';
+import { JumpDetector } from './motion.js';
 
 // ---------------------------------------------------------------- asetukset
 const params = new URLSearchParams(location.search);
@@ -26,8 +27,10 @@ const store = {
 const settings = Object.assign({
   name: '', shadows: true, bob: true, voice: true, music: true,
   assist: true, takeoffHelp: true, guide: true, classIdx: 0, horseIdx: 0,
+  vrJump: 'body', phoneJump: 'swing',
 }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
 // ---------------------------------------------------------------- renderöijä ja kohtaus
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -123,7 +126,7 @@ msgPanel.mesh.position.set(0, 0.16, -1.25);
 camera.add(msgPanel.mesh);
 msgPanel.visible = false;
 
-const menuPanel = new Panel({ width: 1.7, pxW: 1024, pxH: 720, draw: drawMenu });
+const menuPanel = new Panel({ width: 1.7, pxW: 1024, pxH: 800, draw: drawMenu });
 const mapPanel = new Panel({ width: 0.95, pxW: 512, pxH: 820, draw: drawMap });
 const rulesPanel = new Panel({ width: 0.95, pxW: 512, pxH: 820, draw: drawRules });
 const resultPanel = new Panel({ width: 1.8, pxW: 1024, pxH: 900, draw: drawResults });
@@ -215,7 +218,7 @@ function horseDef() { return HORSES[settings.horseIdx % HORSES.length]; }
 function riderName() { return (settings.name || '').trim() || 'Sinä'; }
 
 function drawMenu(g, p) {
-  panelBg(g, 1024, 720);
+  panelBg(g, 1024, 800);
   const cls = G.cls, h = horseDef();
   text(g, 'KEPPARI CUP 2026', 512, 62, { size: 56, weight: 900, color: '#ffd666', align: 'center' });
   text(g, 'Esteratsastus • SKHH ry:n säännöt', 512, 112, { size: 28, color: '#9fd3ff', align: 'center' });
@@ -232,11 +235,24 @@ function drawMenu(g, p) {
   p.button('help', 60, 392, 290, 66, `Ponnistusapu: ${settings.takeoffHelp ? 'ON' : 'OFF'}`, { small: true });
   p.button('guide', 367, 392, 290, 66, `Opastus: ${settings.guide ? 'ON' : 'OFF'}`, { small: true });
   p.button('assist', 674, 392, 290, 66, settings.assist ? 'Kääntö: istuen' : 'Kääntö: seisten', { small: true });
+  // hyppytapa + hyppytesti
+  const jm = jumpMode();
+  const canToggle = G.mode !== 'mono' || IS_TOUCH;
+  const jlabel = { body: 'Hyppy: hyppää itse', swing: 'Hyppy: heilauta', tap: 'Hyppy: napautus', keys: 'Hyppy: välilyönti' }[jm];
+  p.button('jumpMode', 60, 478, 430, 66, jlabel, { small: true, disabled: !canToggle });
+  let test, tcol = '#cfd8ea';
+  if (G.time - (G.jumpTestT || -9) < 1.6) { test = jm === 'swing' ? '✔ Heilautus tunnistettu!' : '✔ Hyppy tunnistettu!'; tcol = '#7CFC00'; }
+  else if (G.sensorFallback && (jm === 'tap')) { test = 'Liikeanturi ei vastaa – käytä napautusta'; tcol = '#ff9f43'; }
+  else if (jm === 'body') test = 'Testaa: hyppää nyt paikallasi!';
+  else if (jm === 'swing') test = 'Testaa: heilauta puhelinta ylös!';
+  else if (jm === 'tap') test = G.mode === 'mono' ? 'Napauta ruutua hypätäksesi' : 'Napauta näyttöä / lasien nappia';
+  else test = 'Välilyönti tai hiiren klikkaus';
+  text(g, test, 740, 511, { size: 26, weight: 700, color: tcol, align: 'center', max: 480 });
   const best = store.get('best.' + cls.id, null);
-  text(g, `Enimmäisaika ${G.TA} s · Arvostelu ${cls.method} · Korkeus ${Math.round(cls.height * 100)} cm`, 512, 500, { size: 26, color: '#ffffff', align: 'center' });
-  text(g, best ? `Oma ennätys: ${best.elim ? 'hylätty' : `${best.vp} vp / ${fmtTime(best.time)} s`}${best.place ? ` · ${best.place}. sija` : ''}` : 'Ei vielä tulosta tässä luokassa', 512, 538, { size: 24, color: '#ffd666', align: 'center' });
-  p.button('start', 262, 568, 500, 106, 'ALOITA RATA ▶', { primary: true });
-  text(g, G.mode === 'mono' ? 'Klikkaa nappia' : 'Valitse katsomalla nappia hetki tai napauta', 512, 698, { size: 22, color: '#8fa3c8', align: 'center' });
+  text(g, `Enimmäisaika ${G.TA} s · Arvostelu ${cls.method} · Korkeus ${Math.round(cls.height * 100)} cm`, 512, 584, { size: 26, color: '#ffffff', align: 'center' });
+  text(g, best ? `Oma ennätys: ${best.elim ? 'hylätty' : `${best.vp} vp / ${fmtTime(best.time)} s`}${best.place ? ` · ${best.place}. sija` : ''}` : 'Ei vielä tulosta tässä luokassa', 512, 622, { size: 24, color: '#ffd666', align: 'center' });
+  p.button('start', 262, 648, 500, 106, 'ALOITA RATA ▶', { primary: true });
+  text(g, G.mode === 'mono' ? (IS_TOUCH ? 'Napauta nappia' : 'Klikkaa nappia') : 'Valitse katsomalla nappia hetki tai napauta', 512, 778, { size: 22, color: '#8fa3c8', align: 'center' });
 }
 
 function drawMap(g) {
@@ -347,13 +363,13 @@ function drawHud(g) {
   const r = G.round;
   if (st === 'ready') {
     text(g, 'Tervehdi tuomaria', 512, 66, { size: 54, weight: 900, color: '#ffd666', align: 'center' });
-    text(g, G.mode === 'mono' ? 'paina välilyöntiä / napauta – kello soi' : 'napauta näyttöä / paina lasien nappia', 512, 128, { size: 34, color: '#ffffff', align: 'center' });
+    text(g, G.mode === 'mono' ? (IS_TOUCH ? 'napauta ruutua – kello soi' : 'paina välilyöntiä / klikkaa – kello soi') : 'napauta näyttöä / paina lasien nappia', 512, 128, { size: 34, color: '#ffffff', align: 'center' });
     return;
   }
   if (st === 'countdown') {
     const c = Math.ceil(G.countdown);
     text(g, `Lähtöön ${c} s`, 512, 66, { size: 60, weight: 900, color: c <= 10 ? '#ff6b6b' : '#ffffff', align: 'center' });
-    text(g, 'Ratsasta LÄHTÖ-linjan läpi', 512, 130, { size: 34, color: '#9fd3ff', align: 'center' });
+    text(g, `Ratsasta LÄHTÖ-linjan läpi · ${jumpHint(true)}`, 512, 130, { size: 32, color: '#9fd3ff', align: 'center', max: 960 });
     drawArrow(g);
     return;
   }
@@ -485,6 +501,7 @@ function startClock() {
   G.state = 'riding';
   G.round.time = 0; G.voltAcc = 0;
   audio.tick(true);
+  showMessage('MATKAAN!', '#7CFC00', jumpHint(false), 2.4);
   updateGuide();
 }
 
@@ -720,6 +737,7 @@ function updatePlayer(dt) {
   if (G.mode === 'mono' || G.mode === 'cardboard') {
     if (keys.has('KeyS') || keys.has('ArrowDown')) targetSpeed = keys.has('ShiftLeft') ? 0 : 1.8;
   }
+  if (G.brake) targetSpeed = 0;
   if (G.state === 'ready') targetSpeed = Math.min(targetSpeed, 1.5);
   if (G.state === 'finished') targetSpeed = 0;
   let wantJump = false;
@@ -811,11 +829,44 @@ function updatePlayer(dt) {
   }
 }
 
-function tryJump() {
+function tryJump(opts = {}) {
   if (P.air || P.speed < 0.8 || G.time - P.landT < 0.08) return;
   const j = jumpParams(P.speed);
   P.peak = j.peak; P.airDur = j.dur; P.air = true; P.airT = 0;
+  if (opts.sensor) {
+    // anturiviiveen kompensointi: oikea ponnistus tapahtui hetki ennen tunnistusta
+    P.airT = Math.min(0.1, j.dur * 0.15);
+    // voimakkaampi oikea hyppy = hieman korkeampi hyppy
+    P.peak *= 0.96 + 0.08 * (opts.strength || 0);
+  }
   audio.whoosh();
+}
+
+// Hyppytapa: VR-laseilla oikea hyppy, kännykällä heilautus, tietokoneella näppäin. Napautus varalla.
+function jumpMode() {
+  if (G.mode === 'mono' && !IS_TOUCH) return 'keys';
+  if (G.mode === 'mono') return (settings.phoneJump === 'tap' || G.sensorFallback) ? 'tap' : 'swing';
+  if (G.mode === 'xr' || G.mode === 'cardboard') return (settings.vrJump === 'tap' || G.sensorFallback) ? 'tap' : 'body';
+  return 'keys';
+}
+function jumpHint(short) {
+  const m = jumpMode();
+  if (m === 'body') return short ? 'hyppää itse esteellä' : 'Hyppää oikeasti itse juuri ennen estettä!';
+  if (m === 'swing') return short ? 'heilauta = hyppy' : 'Heilauta puhelinta ylös juuri ennen estettä!';
+  if (m === 'tap') return short ? 'napauta = hyppy' : 'Napauta juuri ennen estettä!';
+  return short ? 'välilyönti = hyppy' : 'Välilyönti tai klikkaus juuri ennen estettä!';
+}
+
+const detector = new JumpDetector((strength, kind) => onBodyJump(strength, kind));
+function onBodyJump(strength) {
+  const m = jumpMode();
+  if (m !== 'body' && m !== 'swing') return;
+  if (G.state === 'lobby' || G.state === 'results') {
+    G.jumpTestT = G.time; audio.whoosh(); haptic(30);
+    if (G.state === 'lobby') { menuPanel.redraw(); setTimeout(() => menuPanel.redraw(), 1700); }
+    return;
+  }
+  if (G.state === 'countdown' || G.state === 'riding') tryJump({ sensor: true, strength });
 }
 
 // Automaattiohjaus testaukseen (?auto tai ?auto=0.6 kohinalla)
@@ -902,6 +953,11 @@ function onUiClick(id) {
     case 'help': settings.takeoffHelp = !settings.takeoffHelp; saveSettings(); menuPanel.redraw(); break;
     case 'guide': settings.guide = !settings.guide; saveSettings(); menuPanel.redraw(); break;
     case 'assist': settings.assist = !settings.assist; saveSettings(); menuPanel.redraw(); break;
+    case 'jumpMode':
+      if (G.mode === 'mono') settings.phoneJump = jumpMode() === 'tap' ? 'swing' : 'tap';
+      else settings.vrJump = jumpMode() === 'tap' ? 'body' : 'tap';
+      G.sensorFallback = false; G.sensorCheckT = G.time; saveSettings(); menuPanel.redraw(); updateTouchUi();
+      break;
     case 'start': startRound(); break;
     case 'retry': startRound(); break;
     case 'next':
@@ -919,7 +975,11 @@ function onSelect(ray) {
     return;
   }
   if (G.state === 'ready') { salute(); return; }
-  if (G.state === 'countdown' || G.state === 'riding') tryJump();
+  if (G.state === 'countdown' || G.state === 'riding') {
+    const m = jumpMode();
+    if (m === 'tap' || m === 'keys') tryJump();
+    else if (!G.msg) showMessage(m === 'body' ? 'HYPPÄÄ ITSE!' : 'HEILAUTA!', '#ffd666', m === 'body' ? 'Oikea hyppy ennen estettä – napautus ei hyppää' : 'Heilauta puhelinta ylös hypätäksesi', 1.6);
+  }
 }
 
 function centerRay() {
@@ -1016,15 +1076,40 @@ function enterGame(mode) {
   camera.position.set(0, 0, 0);
   camera.rotation.set(0, 0, 0);
   if (mode === 'mono') {
-    camera.fov = 72;
     if (matchMedia('(pointer: coarse)').matches) { $('touchHint').hidden = false; setTimeout(() => { $('touchHint').style.opacity = 0; }, 6000); }
   } else if (mode === 'cardboard') camera.fov = 85;
+  if (mode === 'mono' && IS_TOUCH) {
+    try { document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); } catch { /* */ }
+  }
+  detector.mode = mode === 'mono' ? 'swing' : 'body';
+  G.sensorFallback = false; G.sensorCheckT = G.time;
+  if (mode !== 'mono' || IS_TOUCH) detector.start();
   onResize();
   requestWake();
   showLobby();
+  updateTouchUi();
+}
+
+// Jos liikeanturi ei vastaa, siirrytään napautukseen ja kerrotaan siitä
+function checkSensor() {
+  const m = jumpMode();
+  if ((m === 'body' || m === 'swing') && !G.sensorFallback && G.time - (G.sensorCheckT || 0) > 3 && !detector.active && !AUTOPILOT) {
+    G.sensorFallback = true;
+    if (G.state === 'lobby') menuPanel.redraw();
+    updateTouchUi();
+    showMessage('Liikeanturi ei vastaa', '#ff9f43', 'Hyppy napauttamalla', 2.5);
+  }
+  detector.enabled = m === 'body' || m === 'swing';
+}
+
+function updateTouchUi() {
+  const show = G.mode === 'mono' && IS_TOUCH;
+  $('touchCtl').hidden = !show;
+  $('tcJump').hidden = !(show && jumpMode() === 'tap');
 }
 
 async function startXR() {
+  await detector.requestPermission();
   try {
     const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor'] });
     session.addEventListener('select', () => onSelect(centerRay()));
@@ -1038,6 +1123,7 @@ async function startXR() {
 
 async function startCardboard() {
   try { if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch { /* */ }
+  await detector.requestPermission();
   window.addEventListener('deviceorientation', onOrientation);
   try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* */ }
   try { await screen.orientation.lock('landscape'); } catch { /* */ }
@@ -1053,6 +1139,8 @@ function exitToTitle() {
   $('menu').hidden = false; $('exitBtn').hidden = true; $('touchHint').hidden = true; $('rotate').hidden = true;
   window.removeEventListener('deviceorientation', onOrientation);
   orient.active = false;
+  detector.stop();
+  $('touchCtl').hidden = true; G.brake = false;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   if (!wasXR && renderer.xr.isPresenting) renderer.xr.getSession().end();
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
@@ -1066,6 +1154,7 @@ function onResize() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, G.mode === 'cardboard' ? 1.5 : 2));
   renderer.setSize(w, h);
   camera.aspect = G.mode === 'cardboard' ? (w / 2) / h : w / h;
+  if (G.mode === 'mono' || G.mode === null) camera.fov = camera.aspect < 1 ? 92 : 72;
   camera.updateProjectionMatrix();
   $('rotate').hidden = !(G.mode === 'cardboard' && h > w);
 }
@@ -1122,6 +1211,9 @@ function step(dt) {
     const h = tgt.standH ? tgt.standH + 0.75 : 2.2;
     const x = tgt.def ? tgt.def.x : tgt.x, z = tgt.def ? tgt.def.z : tgt.z;
     guide.position.set(x, h + Math.sin(t * 3) * 0.12, z);
+    const dist = Math.hypot(x - P.x, z - P.z);
+    guide.visible = dist > 5;
+    guide.scale.setScalar(clamp((dist - 5) / 4, 0.2, 1));
     guide.rotation.y = t * 2;
     G.arrow = wrap(Math.atan2(-(x - P.x), -(z - P.z)) - (G.gazeYaw || 0));
   } else G.arrow = 0;
@@ -1166,8 +1258,9 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   step(dt);
   rig.updateMatrixWorld(true);
-  if (renderer.xr.isPresenting) renderer.xr.updateCamera(camera);
+  if (renderer.xr.isPresenting) { renderer.xr.updateCamera(camera); detector.updateHead(camera.position.y, dt); }
   camera.updateMatrixWorld(true);
+  if (G.mode) checkSensor();
 
   // katseella valinta (VR / cardboard)
   const menus = G.state === 'lobby' || G.state === 'results';
@@ -1203,7 +1296,14 @@ $('optShadows').checked = settings.shadows;
 $('optBob').checked = settings.bob;
 $('optVoice').checked = settings.voice;
 $('optMusic').checked = settings.music;
-$('btnScreen').onclick = () => enterGame('mono');
+$('btnScreen').onclick = async () => { if (IS_TOUCH) await detector.requestPermission(); enterGame('mono'); };
+// kosketusohjaimet (kännykkä ilman laseja)
+const brake = (on) => (e) => { e.preventDefault(); G.brake = on; $('tcBrake').classList.toggle('on', on); };
+$('tcBrake').addEventListener('pointerdown', brake(true));
+$('tcBrake').addEventListener('pointerup', brake(false));
+$('tcBrake').addEventListener('pointercancel', brake(false));
+$('tcBrake').addEventListener('pointerleave', brake(false));
+$('tcJump').addEventListener('pointerdown', (e) => { e.preventDefault(); audio.init(); if (G.state === 'ready') salute(); else tryJump(); });
 $('btnCardboard').onclick = () => startCardboard();
 $('btnXR').onclick = () => startXR();
 $('exitBtn').onclick = () => exitToTitle();

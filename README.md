@@ -7,17 +7,23 @@ Toimii Android-puhelimella ja halvoilla puhelin-VR-laseilla (Google Cardboard -t
 Avaa GitHub Pages -osoite puhelimen Chromella:
 `https://willizilliw.github.io/keppari/`
 
-1. Kirjoita nimesi ja valitse **🥽 Pelaa VR-laseilla** (WebXR) tai **📱 Puhelin-VR (Cardboard-tila)**.
-2. Aseta puhelin vaakatasossa VR-laseihin.
-3. Valitse luokka ja keppihevonen katsomalla nappia hetken (tai napauta).
+1. Kirjoita nimesi ja valitse tapa pelata:
+   - **🥽 Pelaa VR-laseilla** (WebXR) tai **📱 Puhelin-VR (Cardboard-tila)** – puhelin vaakatasossa VR-laseihin
+   - **🤳 Pelaa kännykällä / ruudulla** – ilman laseja, pysty- tai vaaka-asennossa
+2. Valitse luokka ja keppihevonen (VR:ssä katsomalla nappia hetken, kännykällä napauttamalla).
+3. Kokeile valikon **hyppytestiä**: hyppää (VR) tai heilauta puhelinta (kännykkä) – näet heti, tunnistuiko.
 4. Lähtöpaikalla **tervehdi tuomaria** napauttamalla → kello soi → 45 s aikaa ylittää lähtölinja.
 
-| Toiminto | VR / Cardboard | Ruutu |
-|---|---|---|
-| Ohjaus | katso minne haluat mennä | vedä hiirellä/sormella, A/D, nuolet |
-| Hyppy | napauta näyttöä / lasien nappi | välilyönti, klikkaus, napautus |
-| Hidasta / pysähdy | katso alas maahan | S (+Shift = pysähdys) |
-| Valikko | katso nappia ~1 s | klikkaa |
+| Toiminto | VR-lasit | Kännykkä ilman laseja | Tietokone |
+|---|---|---|---|
+| Ohjaus | katso minne haluat mennä | vedä sormella | hiiri / A, D |
+| **Hyppy** | **hyppää oikeasti itse** | **heilauta puhelinta ylös** | välilyönti / klikkaus |
+| Hidasta | katso alas maahan | 🐢 Hidasta-nappi | S |
+| Valikko | katso nappia ~1 s | napauta | klikkaa |
+
+Hyppy tunnistetaan puhelimen kiihtyvyysanturilla: VR-laseissa ponnistus ja sitä seuraava hetken vapaa pudotus
+(kävely ja pään liikkeet eivät laukaise hyppyä), kännykällä nopea heilautus. Voimakkaampi hyppy nostaa hieman korkeammalle.
+Jos anturi ei vastaa, peli siirtyy napautukseen ja kertoo siitä. Napautuksen voi myös valita itse valikosta.
 
 ## Säännöt
 Pelin säännöt perustuvat **Suomen Keppihevosharrastajat ry:n** dokumenttiin *Esteratsastus – ohjeet & säännöt* (päivitetty 4.1.2023):

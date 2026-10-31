@@ -35,3 +35,13 @@ details ul { margin: 8px 0 4px; padding-left: 20px; font-size: 14px; line-height
   border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff; font-size: 18px; cursor: pointer; }
 #touchHint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 5; background: rgba(0,0,0,.45);
   padding: 6px 14px; border-radius: 20px; font-size: 13px; pointer-events: none; transition: opacity 1s; }
+
+#touchCtl { position: fixed; inset: auto 0 0 0; z-index: 6; pointer-events: none; }
+#touchCtl button { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom)); width: 86px; height: 86px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.55); background: rgba(10,25,55,.55); color: #fff; font-size: 30px; pointer-events: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; }
+#touchCtl button span { font-size: 12px; font-weight: 700; margin-top: 2px; }
+#touchCtl button.on { background: rgba(255,214,102,.75); color: #3a1e00; }
+#tcBrake { left: calc(18px + env(safe-area-inset-left)); }
+#tcJump { right: calc(18px + env(safe-area-inset-right)); background: rgba(255,214,102,.6) !important; }
+#touchCtl button[hidden] { display: none; }
