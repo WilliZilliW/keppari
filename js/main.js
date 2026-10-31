@@ -784,11 +784,14 @@ function updatePlayer(dt) {
     if (keys.has('KeyS') || keys.has('ArrowDown')) targetSpeed = keys.has('ShiftLeft') ? 0 : 1.8;
   }
   if (G.brake) targetSpeed = 0;
-  if (G.state === 'ready') targetSpeed = Math.min(targetSpeed, 1.5);
+  // lähtöpaikalla seistään paikallaan kunnes kello soi: voi katsella ja tervehtiä rauhassa
+  const standing = G.state === 'ready';
+  if (standing) targetSpeed = 0;
   if (G.state === 'finished') targetSpeed = 0;
   let wantJump = false;
   if (AUTOPILOT) { const ap = autopilot(); targetYaw = ap.yaw; targetSpeed = ap.speed; wantJump = ap.jump; }
 
+  if (standing) targetYaw = P.heading;
   const diff = wrap(targetYaw - P.heading);
   const maxTurn = P.air ? 0.5 : 2.6;
   const rate = clamp(diff * 4.2, -maxTurn, maxTurn);
@@ -1240,7 +1243,7 @@ function step(dt) {
     // tervehdys katsomalla tuomaria (ei vaadi ohjainta eikä napautusta)
     if (G.state === 'ready') {
       const a = wrap(Math.atan2(-(JUDGE.x - P.x), -(JUDGE.z - P.z)) - (G.gazeYaw || 0));
-      if (Math.abs(a) < 0.22 && G.time - G.readyT > 0.8) G.saluteT = (G.saluteT || 0) + dt;
+      if (Math.abs(a) < 0.3 && G.time - G.readyT > 0.8) G.saluteT = (G.saluteT || 0) + dt;
       else G.saluteT = Math.max(0, (G.saluteT || 0) - dt * 2);
       if (G.mode === 'xr' || G.mode === 'cardboard') reticle.setProgress(clamp(G.saluteT / SALUTE_DWELL, 0, 1));
       if (G.saluteT >= SALUTE_DWELL) { G.saluteT = 0; P.dip = 0.09; reticle.setProgress(0); salute(); }
