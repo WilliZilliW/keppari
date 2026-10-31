@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1d3a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Keppari VR – Esteratsastus</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="menu" class="overlay">
+    <div class="card">
+      <div class="logo">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><use href="icon.svg#horse"/></svg>
+        <div>
+          <h1>KEPPARI <span>VR</span></h1>
+          <p class="sub">Esteratsastus ratsastajan silmin</p>
+        </div>
+      </div>
+
+      <label class="field">Ratsastajan nimi
+        <input id="riderName" maxlength="16" placeholder="Sinä" autocomplete="off">
+      </label>
+
+      <div class="buttons">
+        <button id="btnXR" class="big primary" hidden>🥽 Pelaa VR-laseilla</button>
+        <button id="btnCardboard" class="big">📱 Puhelin-VR (Cardboard-tila)</button>
+        <button id="btnScreen" class="big ghost">🖥️ Pelaa ruudulla</button>
+      </div>
+      <p id="xrNote" class="note"></p>
+
+      <details>
+        <summary>Näin pelaat</summary>
+        <ul>
+          <li><b>Ohjaus katseella:</b> keppihevonen laukkaa sinne, minne katsot.</li>
+          <li><b>Hyppy:</b> napauta näyttöä / paina lasien nappia juuri ennen estettä.</li>
+          <li><b>Hidasta:</b> katso alas maahan (raviin tai pysähdys).</li>
+          <li><b>Valikot:</b> katso nappia hetki tai napauta.</li>
+          <li>Lähtöpaikalla <b>tervehdi tuomaria</b> napauttamalla – kello soi ja sinulla on 45 s aikaa ylittää lähtölinja.</li>
+          <li>Ruudulla: vedä hiirellä/sormella katsoaksesi, välilyönti tai napautus = hyppy, W/S = vauhti.</li>
+        </ul>
+      </details>
+      <details>
+        <summary>Säännöt (SKHH ry, esteratsastus)</summary>
+        <ul>
+          <li>Pudotus, kielto, ohiratsastus, ylimääräinen voltti, vesihaudan koskettaminen: <b>4 vp</b></li>
+          <li>Huomattava määrä raviaskeleita: <b>4 vp</b></li>
+          <li>Enimmäisajan ylitys: <b>1 vp / alkava 4 s</b> (uusinnassa 1 vp / alkava s)</li>
+          <li>Toinen tottelemattomuus, väärä este, radalta poistuminen, kaksinkertainen enimmäisaika, lähtö ennen lupaa tai yli 45 s: <b>hylkäys</b></li>
+          <li>Kielto sarjaesteellä: koko sarja ratsastetaan uudelleen.</li>
+          <li>Arvostelu A.2.0: vähiten virhepisteitä, tasatilanteessa nopein aika. Grand Prix A.2.1: puhtaat ratsukot uusintaan.</li>
+        </ul>
+      </details>
+      <details>
+        <summary>Asetukset</summary>
+        <label class="row"><input type="checkbox" id="optShadows" checked> Varjot (pois päältä = sujuvampi vanhoilla puhelimilla)</label>
+        <label class="row"><input type="checkbox" id="optBob" checked> Laukan heilunta kamerassa</label>
+        <label class="row"><input type="checkbox" id="optVoice" checked> Kuuluttaja (puhesynteesi)</label>
+        <label class="row"><input type="checkbox" id="optMusic" checked> Taustamusiikki valikoissa</label>
+      </details>
+      <p class="foot">Säännöt: Suomen Keppihevosharrastajat ry – Esteratsastus, ohjeet &amp; säännöt (2023).</p>
+    </div>
+  </div>
+
+  <div id="loading" class="overlay"><div class="spinner"></div><p>Rakennetaan kilpailukenttää…</p></div>
+  <div id="rotate" class="overlay" hidden><p>📱↻<br>Käännä puhelin vaakatasoon ja aseta se VR-laseihin.</p></div>
+  <button id="exitBtn" hidden title="Takaisin valikkoon">✕</button>
+  <div id="touchHint" hidden>Vedä katsoaksesi · napauta hypätäksesi</div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

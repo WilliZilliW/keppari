@@ -1,0 +1,10 @@
+{
+  "name": "Keppari VR – Esteratsastus",
+  "short_name": "Keppari VR",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b1d3a",
+  "theme_color": "#0b1d3a",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
